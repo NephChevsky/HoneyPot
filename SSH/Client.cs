@@ -26,8 +26,8 @@ namespace HoneyPot.SSH
 			_socket = socket;
 
 			_networkStream = new(_socket);
-			_streamWriter = new(_networkStream, Encoding.ASCII);
-			_streamReader = new(_networkStream, Encoding.ASCII);
+			_streamWriter = new(_networkStream, Encoding.UTF8);
+			_streamReader = new(_networkStream, Encoding.UTF8);
 		}
 
 		public void Poll()
