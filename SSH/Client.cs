@@ -17,7 +17,7 @@ namespace HoneyPot.SSH
 		{
 			get
 			{
-				return _socket != null;
+				return _socket != null && _socket.Connected;
 			}
 		}
 
