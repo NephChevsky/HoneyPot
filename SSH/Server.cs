@@ -1,11 +1,6 @@
 ﻿using Microsoft.Extensions.Hosting;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.Sockets;
 using System.Net;
-using System.Text;
-using System.Threading.Tasks;
 using Serilog;
 
 namespace HoneyPot.SSH
@@ -13,7 +8,6 @@ namespace HoneyPot.SSH
 	internal class Server : IHostedService
 	{
 		private TcpListener _tcpListener;
-		private Task _runner;
 
 		private List<Client> _clients = [];
 
@@ -22,7 +16,7 @@ namespace HoneyPot.SSH
 			_tcpListener = new TcpListener(IPAddress.Parse("127.0.0.1"), 51551);
 			_tcpListener.Start();
 
-			_runner = Task.Run(async () =>
+			Task.Run(async () =>
 			{
 				await Poll(cancellationToken);
 			}, cancellationToken);
