@@ -21,6 +21,8 @@ namespace HoneyPot.SSH
 				await Poll(cancellationToken);
 			}, cancellationToken);
 
+			Log.Information("SSH Server has started");
+
 			return Task.CompletedTask;
 		}
 
@@ -43,7 +45,9 @@ namespace HoneyPot.SSH
 
 		public Task StopAsync(CancellationToken cancellationToken)
 		{
-			throw new NotImplementedException();
+			_tcpListener.Stop();
+			Log.Information("SSH Server stopped");
+			return Task.CompletedTask;
 		}
 	}
 }
