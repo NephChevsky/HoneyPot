@@ -13,7 +13,7 @@ namespace HoneyPot
 			Log.Logger = CreateLogger();
 
 			HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
-			builder.Services.AddHostedService<Server>();
+			builder.Services.AddHostedService<SshServerService>();
 
 			var host = builder.Build();
 			host.Run();
