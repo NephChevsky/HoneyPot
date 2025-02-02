@@ -11,6 +11,8 @@ namespace HoneyPot.SSH
 		private StreamWriter _streamWriter;
 		private StreamReader _streamReader;
 
+		private bool _protocolVersionExchangeCompleted;
+
 		public bool IsConnected
 		{
 			get
@@ -32,6 +34,20 @@ namespace HoneyPot.SSH
 		{
 			if (!IsConnected)
 			{
+				return;
+			}
+
+			if (!_protocolVersionExchangeCompleted)
+			{
+				// Step 1: Send SSH protocol version string to the client
+				string versionString = "SSH-2.0-Open SSH for _Windows_ 9.5\r\n"; // Server's version string
+				_streamWriter.Write(versionString);
+				_streamWriter.Flush();
+
+				// Step 2: Wait for the client's response to the protocol version
+				string clientVersion = _streamReader.ReadLine();
+				_protocolVersionExchangeCompleted = true;
+				Log.Information("Received client version: {ClientVersion}", clientVersion);
 				return;
 			}
 		}
