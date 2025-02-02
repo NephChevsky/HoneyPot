@@ -45,9 +45,32 @@ namespace HoneyPot.SSH
 				_streamWriter.Flush();
 
 				// Step 2: Wait for the client's response to the protocol version
-				string clientVersion = _streamReader.ReadLine();
-				_protocolVersionExchangeCompleted = true;
-				Log.Information("Received client version: {ClientVersion}", clientVersion);
+				List<byte> data = new List<byte>();
+
+				bool foundCR = false;
+				int value = _networkStream.ReadByte();
+				while (value != -1)
+				{
+					if (foundCR && (value == '\n'))
+					{
+						string clientVersion = Encoding.UTF8.GetString(data.ToArray());
+						_protocolVersionExchangeCompleted = true;
+						Log.Information("Received client version: {ClientVersion}", clientVersion);
+						break;
+					}
+
+					if (value == '\r')
+					{
+						foundCR = true;
+					}
+					else
+					{
+						foundCR = false;
+						data.Add((byte)value);
+					}
+
+					value = _networkStream.ReadByte();
+				}
 				return;
 			}
 		}
