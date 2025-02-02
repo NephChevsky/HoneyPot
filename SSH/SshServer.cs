@@ -1,14 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics.Contracts;
+﻿using System.Diagnostics.Contracts;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace HoneyPot.SSH
 {
-    public class SshServer : IDisposable
+	public class SshServer : IDisposable
     {
         private readonly object _lock = new object();
         private readonly List<Session> _sessions = new List<Session>();
