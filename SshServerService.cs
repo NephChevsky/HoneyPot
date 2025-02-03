@@ -1,9 +1,10 @@
-﻿using HoneyPot.SSH.Services;
+﻿using FxSsh;
+using FxSsh.Services;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using System.Net;
 
-namespace HoneyPot.SSH
+namespace HoneyPot
 {
 	internal class SshServerService : IHostedService
 	{
@@ -36,7 +37,7 @@ namespace HoneyPot.SSH
 
 			if (e is UserAuthService)
 			{
-				var service = (UserAuthService) e;
+				var service = (UserAuthService)e;
 				service.UserAuth += Event_UserAuth;
 			}
 			else if (e is ConnectionService)
@@ -61,11 +62,8 @@ namespace HoneyPot.SSH
 		{
 			Console.WriteLine($"Channel {e.Channel.ServerChannelId} runs {e.ShellType}: \"{e.CommandText}\", client key SHA256:{e.AttachedUserAuthArgs.Fingerprint}.");
 
-			e.Agreed = false;
-
 			if (e.ShellType == "shell")
 			{
-				e.Agreed = true;
 			}
 		}
 
