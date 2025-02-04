@@ -10,7 +10,7 @@ namespace HoneyPot
 	{
 		private SshServer _sshServer;
 
-		Dictionary<byte[], FakeShell> _shells = [];
+		Dictionary<byte[], VirtualShell> _shells = [];
 
 		public Task StartAsync(CancellationToken cancellationToken)
 		{
@@ -74,7 +74,7 @@ namespace HoneyPot
 			{
 				e.Agreed = true;
 
-				if (!_shells.TryGetValue(e.AttachedUserAuthArgs.Session.SessionId, out FakeShell shell))
+				if (!_shells.TryGetValue(e.AttachedUserAuthArgs.Session.SessionId, out VirtualShell shell))
 				{
 					shell = new();
 					_shells.Add(e.AttachedUserAuthArgs.Session.SessionId, shell);
