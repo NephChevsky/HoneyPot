@@ -2,6 +2,7 @@
 using FxSsh.Services;
 using HoneyPot.DB;
 using HoneyPot.DB.Models;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using System.Net;
@@ -13,19 +14,21 @@ namespace HoneyPot
 		private SshServer _sshServer;
 
 		private HoneyPotDbContext _db;
+		private IConfiguration _configuration;
 
 		readonly Dictionary<byte[], VirtualShell> _shells = [];
 
-		public SshServerService(HoneyPotDbContext dbcontext)
+		public SshServerService(HoneyPotDbContext dbcontext, IConfiguration configuration)
 		{
 			_db = dbcontext;
+			_configuration = configuration;
 		}
 
 		public Task StartAsync(CancellationToken cancellationToken)
 		{
 			_sshServer = new(new StartingInfo(IPAddress.Parse("127.0.0.1"), 51551, "SSH-2.0-OpenSSH_for_Windows_9.5"));
-			_sshServer.AddHostKey("rsa-sha2-256", KeyGenerator.GenerateRsaKeyPem(2048));
-			_sshServer.AddHostKey("rsa-sha2-512", KeyGenerator.GenerateRsaKeyPem(2048));
+			_sshServer.AddHostKey("rsa-sha2-256", _configuration["RSA2048PrivateKey"]);
+			_sshServer.AddHostKey("rsa-sha2-512", _configuration["RSA2048PrivateKey"]);
 			_sshServer.ConnectionAccepted += Event_ConnectionAccepted;
 			_sshServer.Start();
 
