@@ -10,7 +10,7 @@ namespace HoneyPot
 	{
 		private SshServer _sshServer;
 
-		Dictionary<byte[], VirtualShell> _shells = [];
+		readonly Dictionary<byte[], VirtualShell> _shells = [];
 
 		public Task StartAsync(CancellationToken cancellationToken)
 		{
@@ -36,16 +36,15 @@ namespace HoneyPot
 		private void Event_ServiceRegistered(object sender, SshService e)
 		{
 			var session = (Session)sender;
-			Log.Information("Session {SessionId} requesting {ServiceName}", BitConverter.ToString(session.SessionId).Replace("-", ""), e.GetType().Name);
+			Log.Information("Session {SessionId} requesting {ServiceName}", Convert.ToHexString(session.SessionId), e.GetType().Name);
 
 			if (e is UserAuthService)
 			{
 				var service = (UserAuthService)e;
 				service.UserAuth += Event_UserAuth;
 			}
-			else if (e is ConnectionService)
+			else if (e is ConnectionService service)
 			{
-				var service = (ConnectionService)e;
 				service.CommandOpened += Event_CommandOpened;
 				/*service.EnvReceived += service_EnvReceived;
 				service.PtyReceived += service_PtyReceived;

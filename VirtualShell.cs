@@ -11,7 +11,7 @@ namespace HoneyPot
 		private string _currentCommand = string.Empty;
 		private string _workingDir = @"C:\Users\Neph";
 
-		private VirtualDisk _disk = new();
+		private readonly VirtualDisk _disk = new();
 
 		public void Start()
 		{

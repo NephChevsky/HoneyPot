@@ -8,12 +8,12 @@ namespace HoneyPot
 {
 	public class VirtualDisk
 	{
-		private List<string> _folders = [
+		private readonly List<string> _folders = [
 			@"C:\",
 			@"C:\Users",
 			@"C:\Users\Neph"
 		];
-		private List<string> _files = [];
+		private readonly List<string> _files = [];
 
 		public void CreateFolder(string dir, string name)
 		{
