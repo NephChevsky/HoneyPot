@@ -1,5 +1,7 @@
 ﻿using FxSsh;
 using FxSsh.Services;
+using HoneyPot.DB;
+using HoneyPot.DB.Models;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using System.Net;
@@ -10,7 +12,14 @@ namespace HoneyPot
 	{
 		private SshServer _sshServer;
 
+		private HoneyPotDbContext _dbContext;
+
 		readonly Dictionary<byte[], VirtualShell> _shells = [];
+
+		public SshServerService(HoneyPotDbContext dbcontext)
+		{
+			_dbContext = dbcontext;
+		}
 
 		public Task StartAsync(CancellationToken cancellationToken)
 		{
@@ -60,7 +69,22 @@ namespace HoneyPot
 
 		private void Event_UserAuth(object sender, UserAuthArgs e)
 		{
-			Log.Information("Client {KeyAlgorithm} fingerprint: {Fingerprint}.", e.KeyAlgorithm, e.Fingerprint);
+			Log.Information("{RemoteEndPoint} connected with credentials: \"{UserName}\" - \"{Password}\"", e.Session.RemoteEndPoint.ToString(), e.Username, e.Password);
+
+			DateTime now = DateTime.UtcNow;
+			string remoteIdentifier = e.Session.RemoteEndPoint.ToString().Split(':')[0];
+			User user = _dbContext.Users.Where(x => x.RemoteIdentifier == remoteIdentifier && x.Login == e.Username && x.Password == e.Password).FirstOrDefault();
+			if (user == null)
+			{
+				user = new User(remoteIdentifier, e.Username, e.Password)
+				{
+					CreationDateTime = now
+				};
+				_dbContext.Users.Add(user);
+			}
+			user.LastLoginDateTime = now;
+
+			_dbContext.SaveChanges();
 
 			e.Result = true;
 		}

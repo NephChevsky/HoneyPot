@@ -1,4 +1,7 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using HoneyPot.DB;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using Serilog.Core;
@@ -12,6 +15,13 @@ namespace HoneyPot
 			Log.Logger = CreateLogger();
 
 			HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+
+			builder.Configuration.AddUserSecrets<Program>();
+
+			builder.Services.AddDbContext<HoneyPotDbContext>(options =>
+			{
+				options.UseSqlServer(builder.Configuration["SQLConnectionString"]);
+			});
 			builder.Services.AddHostedService<SshServerService>();
 
 			var host = builder.Build();
