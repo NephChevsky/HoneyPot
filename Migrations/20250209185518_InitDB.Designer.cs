@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace HoneyPot.Migrations
 {
     [DbContext(typeof(HoneyPotDbContext))]
-    [Migration("20250209175232_initdb")]
-    partial class initdb
+    [Migration("20250209185518_InitDB")]
+    partial class InitDB
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

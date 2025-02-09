@@ -12,13 +12,13 @@ namespace HoneyPot
 	{
 		private SshServer _sshServer;
 
-		private HoneyPotDbContext _dbContext;
+		private HoneyPotDbContext _db;
 
 		readonly Dictionary<byte[], VirtualShell> _shells = [];
 
 		public SshServerService(HoneyPotDbContext dbcontext)
 		{
-			_dbContext = dbcontext;
+			_db = dbcontext;
 		}
 
 		public Task StartAsync(CancellationToken cancellationToken)
@@ -73,18 +73,18 @@ namespace HoneyPot
 
 			DateTime now = DateTime.UtcNow;
 			string remoteIdentifier = e.Session.RemoteEndPoint.ToString().Split(':')[0];
-			User user = _dbContext.Users.Where(x => x.RemoteIdentifier == remoteIdentifier && x.Login == e.Username && x.Password == e.Password).FirstOrDefault();
+			User user = _db.Users.Where(x => x.RemoteIdentifier == remoteIdentifier && x.Login == e.Username && x.Password == e.Password).FirstOrDefault();
 			if (user == null)
 			{
 				user = new User(remoteIdentifier, e.Username, e.Password)
 				{
 					CreationDateTime = now
 				};
-				_dbContext.Users.Add(user);
+				_db.Users.Add(user);
 			}
 			user.LastLoginDateTime = now;
 
-			_dbContext.SaveChanges();
+			_db.SaveChanges();
 
 			e.Result = true;
 		}
@@ -99,7 +99,8 @@ namespace HoneyPot
 
 				if (!_shells.TryGetValue(e.AttachedUserAuthArgs.Session.SessionId, out VirtualShell shell))
 				{
-					shell = new();
+					User user = _db.Users.Where(x => x.RemoteIdentifier == e.AttachedUserAuthArgs.Session.RemoteEndPoint.ToString().Split(':', StringSplitOptions.None)[0] && x.Login == e.AttachedUserAuthArgs.Username && x.Password == e.AttachedUserAuthArgs.Password).First();
+					shell = new(_db, user);
 					_shells.Add(e.AttachedUserAuthArgs.Session.SessionId, shell);
 
 					e.Channel.DataReceived += (ss, ee) => shell.OnData(ee);

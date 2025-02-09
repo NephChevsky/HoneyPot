@@ -1,6 +1,6 @@
 ﻿using HoneyPot.DB.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace HoneyPot.DB
 {
@@ -48,7 +48,14 @@ namespace HoneyPot.DB
 
 				e.Property(e => e.Verb);
 
-				e.Property(e => e.Args);
+				e.Property(e => e.Args)
+					.HasConversion(
+						c => string.Join(' ', c),
+						c => c.Split(' ', StringSplitOptions.None).ToList(),
+						new ValueComparer<List<string>>((c1,c2) => c1.SequenceEqual(c2),
+							c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+							c => c.ToList())
+						);
 
 				e.Property(e => e.Owner)
 					.IsRequired();

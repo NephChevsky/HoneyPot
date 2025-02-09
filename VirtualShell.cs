@@ -1,4 +1,6 @@
-﻿using Serilog;
+﻿using HoneyPot.DB;
+using HoneyPot.DB.Models;
+using Serilog;
 using System.Text;
 
 namespace HoneyPot
@@ -11,7 +13,15 @@ namespace HoneyPot
 		private string _currentCommand = string.Empty;
 		private string _workingDir = @"C:\Users\Neph";
 
+		private HoneyPotDbContext _db;
+		private User _user;
 		private readonly VirtualDisk _disk = new();
+
+		public VirtualShell(HoneyPotDbContext dbcontext, User user)
+		{
+			_db = dbcontext;
+			_user = user;
+		}
 
 		public void Start()
 		{
@@ -71,71 +81,94 @@ namespace HoneyPot
 		private bool RunCommand(string cmd)
 		{
 			Log.Information(cmd);
-			cmd = cmd.Trim();
-			List<string> splittedCmd = [.. cmd.Split(' ')];
-			string verb = splittedCmd[0];
-			List<string> parameters = splittedCmd.Skip(1).ToList();
-			if (verb == "dir")
+			bool exit = false;
+			if (Command.TryParse(cmd, out Command command))
 			{
-				List<string> folders = _disk.GetFolders(_workingDir);
-				List<string> files = _disk.GetFiles(_workingDir);
-				List<string> listing = [];
-				listing.AddRange(folders);
-				listing.AddRange(files);
-				listing = [.. listing.OrderBy(x => x)];
-				DataReceived(this, Encoding.UTF8.GetBytes($" Volume in drive {_workingDir[0]} has no label.\r\n"));
-				DataReceived(this, Encoding.UTF8.GetBytes($" Volume Serial Number is EA45-3E10\r\n\r\n"));
-				DataReceived(this, Encoding.UTF8.GetBytes($" Directory of {_workingDir}\r\n\r\n"));
-				DataReceived(this, Encoding.UTF8.GetBytes($"04/02/2025  22:41    <DIR>          .\r\n"));
-				DataReceived(this, Encoding.UTF8.GetBytes($"04/02/2025  22:41    <DIR>          ..\r\n"));
-				foreach (string folder in folders)
+				try
 				{
-					DataReceived(this, Encoding.UTF8.GetBytes($"04/02/2025  22:41    <DIR>          {folder}\r\n"));
-				}
-				DataReceived(this, Encoding.UTF8.GetBytes($"               {files.Count} File(s)              0 bytes\r\n"));
-				DataReceived(this, Encoding.UTF8.GetBytes($"               {folders.Count} Dir(s)  479,379,808,256 bytes free\r\n\r\n"));
-			}
-			else if (verb == "cd")
-			{
-				if (_disk.FolderExists(_workingDir, parameters[0]))
-				{
-					if (parameters[0] == "..")
+					if (command.Verb == "dir")
 					{
-						_workingDir = string.Join('\\', _workingDir.Split('\\').SkipLast(1));
+						List<string> folders = _disk.GetFolders(_workingDir);
+						List<string> files = _disk.GetFiles(_workingDir);
+						List<string> listing = [];
+						listing.AddRange(folders);
+						listing.AddRange(files);
+						listing = [.. listing.OrderBy(x => x)];
+						DataReceived(this, Encoding.UTF8.GetBytes($" Volume in drive {_workingDir[0]} has no label.\r\n"));
+						DataReceived(this, Encoding.UTF8.GetBytes($" Volume Serial Number is EA45-3E10\r\n\r\n"));
+						DataReceived(this, Encoding.UTF8.GetBytes($" Directory of {_workingDir}\r\n\r\n"));
+						DataReceived(this, Encoding.UTF8.GetBytes($"04/02/2025  22:41    <DIR>          .\r\n"));
+						DataReceived(this, Encoding.UTF8.GetBytes($"04/02/2025  22:41    <DIR>          ..\r\n"));
+						foreach (string folder in folders)
+						{
+							DataReceived(this, Encoding.UTF8.GetBytes($"04/02/2025  22:41    <DIR>          {folder}\r\n"));
+						}
+						DataReceived(this, Encoding.UTF8.GetBytes($"               {files.Count} File(s)              0 bytes\r\n"));
+						DataReceived(this, Encoding.UTF8.GetBytes($"               {folders.Count} Dir(s)  479,379,808,256 bytes free\r\n\r\n"));
+						command.Succeeded = true;
+					}
+					else if (command.Verb == "cd")
+					{
+						if (_disk.FolderExists(_workingDir, command.Args[0]))
+						{
+							if (command.Args[0] == "..")
+							{
+								_workingDir = string.Join('\\', _workingDir.Split('\\').SkipLast(1));
+							}
+							else
+							{
+								_workingDir = Path.Combine(_workingDir, command.Args[0]);
+							}
+							DataReceived(this, Encoding.UTF8.GetBytes("\r\n"));
+							command.Succeeded = true;
+						}
+					}
+					else if (command.Verb == "mkdir")
+					{
+						if (command.Args.Count == 0)
+						{
+							DataReceived(this, Encoding.UTF8.GetBytes("The syntax of the command is incorrect.\r\n"));
+							command.Succeeded = true;
+						}
+						else
+						{
+							foreach (string arg in command.Args)
+							{
+								_disk.CreateFolder(_workingDir, arg);
+							}
+							DataReceived(this, Encoding.UTF8.GetBytes("\r\n"));
+							command.Succeeded = true;
+						}
+					}
+					else if (command.Verb == "exit")
+					{
+						CloseReceived(this, [0x03]);
+						command.Succeeded = true;
+						exit = true;
 					}
 					else
 					{
-						_workingDir = Path.Combine(_workingDir, parameters[0]);
+						DataReceived(this, Encoding.UTF8.GetBytes($"'{cmd.Split(' ')[0]}' is not recognized as an internal or external command,\r\noperable program or batch file.\r\n"));
 					}
-					DataReceived(this, Encoding.UTF8.GetBytes("\r\n"));
 				}
-			}
-			else if (verb == "mkdir")
-			{
-				if (parameters.Count == 0)
+				catch (Exception ex)
 				{
-					DataReceived(this, Encoding.UTF8.GetBytes("The syntax of the command is incorrect.\r\n"));
+					Log.Error("Failed to execute command {FullCommand}: {ExceptionMessage}\r\n{ExceptionStackTrace}", command.FullCommand, ex.Message, ex.StackTrace);
 				}
-				else
-				{
-					foreach (string parameter in parameters)
-					{
-						_disk.CreateFolder(_workingDir, parameter);
-					}
-					DataReceived(this, Encoding.UTF8.GetBytes("\r\n"));
-				}
-			}
-			else if (verb == "exit")
-			{
-				CloseReceived(this, [0x03]);
-				return true;
 			}
 			else
 			{
-				DataReceived(this, Encoding.UTF8.GetBytes($"'{cmd.Split(' ')[0]}' is not recognized as an internal or external command,\r\noperable program or batch file.\r\n"));
+				command = new()
+				{
+					FullCommand = cmd
+				};
 			}
+			command.Owner = _user.Id;
+			command.ExecutionDateTime = DateTime.UtcNow;
+			_db.Commands.Add(command);
+			_db.SaveChanges();
 
-			return false;
+			return exit;
 		}
 
 		public void OnClose()
